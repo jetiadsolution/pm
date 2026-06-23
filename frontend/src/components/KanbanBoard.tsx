@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,10 +14,41 @@ import {
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
+import { fetchBoard, saveBoard } from "@/lib/api";
+import { LoginForm } from "@/components/LoginForm";
+import { logout } from "@/lib/api";
 
 export const KanbanBoard = () => {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const b = await fetchBoard();
+        setBoard(b as BoardData);
+      } catch (e) {
+        // unauthenticated or network error — keep demo data
+        console.warn("Could not load board from backend:", e);
+        // mark as not loaded but unauthenticated
+        setUnauthenticated(true);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    (async () => {
+      try {
+        await saveBoard(board);
+      } catch (e) {
+        console.warn("Failed to save board:", e);
+      }
+    })();
+  }, [board, loaded]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -91,6 +122,28 @@ export const KanbanBoard = () => {
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
 
+  const [unauthenticated, setUnauthenticated] = useState(false);
+
+  const handleLoginSuccess = async () => {
+    setUnauthenticated(false);
+    try {
+      const b = await fetchBoard();
+      setBoard(b as BoardData);
+    } catch (e) {
+      console.warn("Failed to load board after login", e);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUnauthenticated(true);
+      setBoard(initialData);
+    } catch (e) {
+      console.warn("Logout failed", e);
+    }
+  };
+
   return (
     <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
@@ -120,16 +173,28 @@ export const KanbanBoard = () => {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {board.columns.map((column) => (
-              <div
-                key={column.id}
-                className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
-                {column.title}
-              </div>
-            ))}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {board.columns.map((column) => (
+                <div
+                  key={column.id}
+                  className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
+                >
+                  <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
+                  {column.title}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              {unauthenticated ? (
+                <LoginForm onSuccess={handleLoginSuccess} />
+              ) : (
+                <button onClick={handleLogout} className="rounded border px-3 py-1 text-sm">
+                  Sign out
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
