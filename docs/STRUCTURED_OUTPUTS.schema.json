@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StructuredOutputs",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "response": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op"],
+        "properties": {
+          "op": { "type": "string", "enum": ["add_card","update_card","move_card","delete_card"] },
+          "card": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "column_id": { "type": "string" },
+              "metadata": { "type": "object" }
+            },
+            "additionalProperties": true
+          },
+          "from_column_id": { "type": "string" },
+          "to_column_id": { "type": "string" },
+          "position": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "board": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "cards": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "description": { "type": "string" },
+                    "metadata": { "type": "object" }
+                  },
+                  "required": ["id","title"],
+                  "additionalProperties": true
+                }
+              }
+            },
+            "required": ["id","title"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "metadata": { "type": "object" }
+  },
+  "required": ["response" ]
+}
